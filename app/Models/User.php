@@ -54,4 +54,18 @@ class User extends Authenticatable
     {
         return $this->hasMany(ActivityLog::class);
     }
-}
+
+    public function lifeGoals(): HasMany
+    {
+        return $this->hasMany(LifeGoal::class);
+    }
+
+    public function treatments(): HasMany
+    {
+        return $this->hasMany(Treatment::class);
+    }
+
+    public function lifeGoalEntries(): HasMany
+    {
+        return $this->hasMany(LifeGoalEntry::class);
+    }}
