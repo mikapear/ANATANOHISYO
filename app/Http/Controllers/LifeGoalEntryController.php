@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LifeGoal;
+use App\Services\UsageRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -29,7 +30,7 @@ class LifeGoalEntryController extends Controller
             return back()->withErrors(['goal' => 'この日は目標の予定日ではありません。']);
         }
 
-        $goal->entries()->updateOrCreate(
+        $entry = $goal->entries()->updateOrCreate(
             ['recorded_on' => $recordedOn->toDateString()],
             [
                 'user_id' => $request->user()->id,
@@ -40,6 +41,15 @@ class LifeGoalEntryController extends Controller
                 'note' => $validated['note'] ?? null,
             ]
         );
+
+        if ($entry->wasRecentlyCreated || $entry->wasChanged()) {
+            app(UsageRecorder::class)->record(
+                $request->user(),
+                'goal.recorded',
+                $goal,
+                ['status' => $validated['status']]
+            );
+        }
 
         return back()->with('status', 'goal-entry-updated');
     }

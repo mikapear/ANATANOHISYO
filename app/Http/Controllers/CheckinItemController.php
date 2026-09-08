@@ -38,6 +38,10 @@ class CheckinItemController extends Controller
             'kind' => $request->input('kind', $checkinItem->kind),
             'schedule_type' => $request->input('schedule_type', $checkinItem->schedule_type),
             'medication_timings' => $request->input('medication_timings', $checkinItem->medication_timings),
+            'dose_amount' => $request->input('dose_amount', $checkinItem->dose_amount),
+            'dose_unit' => $request->input('dose_unit', $checkinItem->dose_unit),
+            'medication_instructions' => $request->input('medication_instructions', $checkinItem->medication_instructions),
+            'medication_precautions' => $request->input('medication_precautions', $checkinItem->medication_precautions),
             'weekdays' => $request->input('weekdays', $checkinItem->weekdays),
             'cycle_on_days' => $request->input('cycle_on_days', $checkinItem->cycle_on_days),
             'cycle_rest_days' => $request->input('cycle_rest_days', $checkinItem->cycle_rest_days),
@@ -67,6 +71,10 @@ class CheckinItemController extends Controller
             'kind' => ['required', Rule::in(['checkin', 'medication'])],
             'medication_timings' => ['nullable', 'required_if:kind,medication', 'array', 'min:1'],
             'medication_timings.*' => [Rule::in(self::TIMINGS)],
+            'dose_amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
+            'dose_unit' => ['nullable', 'string', 'max:30'],
+            'medication_instructions' => ['nullable', 'string', 'max:1000'],
+            'medication_precautions' => ['nullable', 'string', 'max:1000'],
             'schedule_type' => ['required', Rule::in(['daily', 'weekdays', 'cycle'])],
             'weekdays' => ['nullable', 'required_if:schedule_type,weekdays', 'array', 'min:1'],
             'weekdays.*' => ['integer', 'between:0,6'],
@@ -100,6 +108,14 @@ class CheckinItemController extends Controller
             'kind' => $validated['kind'],
             'medication_timings' => $validated['kind'] === 'medication'
                 ? array_values(array_unique($validated['medication_timings']))
+                : null,
+            'dose_amount' => $validated['kind'] === 'medication' ? ($validated['dose_amount'] ?? null) : null,
+            'dose_unit' => $validated['kind'] === 'medication' ? ($validated['dose_unit'] ?? null) : null,
+            'medication_instructions' => $validated['kind'] === 'medication'
+                ? ($validated['medication_instructions'] ?? null)
+                : null,
+            'medication_precautions' => $validated['kind'] === 'medication'
+                ? ($validated['medication_precautions'] ?? null)
                 : null,
             'schedule_type' => $validated['schedule_type'],
             'weekdays' => $validated['schedule_type'] === 'weekdays'

@@ -6,6 +6,8 @@ use App\Models\ActivityLog;
 use App\Models\LifeGoal;
 use App\Models\Project;
 use App\Models\Todo;
+use App\Models\Treatment;
+use App\Services\UsageRecorder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -49,6 +51,14 @@ class TodayController extends Controller
             ->where('user_id', $user->id)
             ->whereDate('performed_on', $today)
             ->orderBy('performed_at')->orderByDesc('created_at')->get();
+
+        $todayTreatments = Treatment::query()
+            ->where('user_id', $user->id)
+            ->whereDate('scheduled_on', $today)
+            ->where('status', '!=', 'cancelled')
+            ->orderBy('scheduled_at')
+            ->orderBy('name')
+            ->get();
 
         $activeProjects = Project::query()
             ->where('user_id', $user->id)
@@ -98,24 +108,32 @@ class TodayController extends Controller
         $latestCondition = $todayActivityLogs->whereNotNull('condition')->last()?->condition;
         $medicationItems = $todayProjects->flatMap->checkinItems->where('kind', 'medication');
         $medicationTotal = $medicationItems->sum(fn ($item) => count($item->medication_timings ?? []));
-        $medicationCompleted = $medicationItems->sum(fn ($item) => $item->entries->count());
+        $medicationRecorded = $medicationItems->sum(fn ($item) => $item->entries->count());
+        $medicationCompleted = $medicationItems->sum(
+            fn ($item) => $item->entries->where('status', 'taken')->count()
+        );
         $unrecordedGoal = $todayGoals->first(fn ($goal) => $goal->entries->isEmpty());
         $recordedGoalCount = $todayGoals->filter(fn ($goal) => $goal->entries->isNotEmpty())->count();
 
         $secretaryMessage = match (true) {
             $latestCondition === 'hard' => '今日はつらさがあるのですね。無理をせず、休むことも今日の大切な予定にしましょう。気になる症状があるときは、医療者に相談してくださいね。',
-            $medicationTotal > $medicationCompleted => '今日のお薬に、まだ確認していない分があります。飲んだかどうかを、落ち着いて一緒に確認しましょう。',
+            $medicationTotal > $medicationRecorded => '今日のお薬に、まだ確認していない分があります。飲んだかどうかを、落ち着いて一緒に確認しましょう。',
+            $medicationTotal > 0 && $medicationCompleted < $medicationTotal => '今日のお薬の状況を記録できましたね。飲み忘れや気になることがあるときは、必要に応じて医療者に相談してください。',
             $medicationTotal > 0 && $unrecordedGoal !== null => "今日のお薬の確認ができましたね。体調に余裕があれば、次は「{$unrecordedGoal->title}」をしてみませんか。無理な日は休んで大丈夫です。",
             $unrecordedGoal !== null => "今日の目標に「{$unrecordedGoal->title}」があります。今の調子に合わせて、できる範囲で取り組んでみましょう。",
             $recordedGoalCount > 0 => '今日の目標を記録できましたね。できた日も、少しできた日も、休んだ日も、どれも大切な歩みです。',
             default => "こんにちは、{$user->name}さん。今日の予定を一緒に確認しましょう。",
         };
+
+        app(UsageRecorder::class)->record($user, 'today.view');
+
         return view('dashboard', compact(
             'today',
             'overdueTodos',
             'todayDueTodos',
             'completedTodayTodos',
             'todayActivityLogs',
+            'todayTreatments',
             'activeProjects',
             'todayProjects',
             'todayGoals',

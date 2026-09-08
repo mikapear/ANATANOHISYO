@@ -13,7 +13,7 @@ class Treatment extends Model
 
     protected $fillable = [
         'user_id', 'project_id', 'name', 'treatment_type', 'scheduled_on',
-        'scheduled_at', 'cycle_number', 'hospital', 'department', 'note', 'status',
+        'scheduled_at', 'cycle_number', 'hospital', 'department', 'note', 'visit_summary', 'status',
     ];
 
     protected function casts(): array

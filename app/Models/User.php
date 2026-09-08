@@ -68,4 +68,10 @@ class User extends Authenticatable
     public function lifeGoalEntries(): HasMany
     {
         return $this->hasMany(LifeGoalEntry::class);
-    }}
+    }
+
+    public function usageEvents(): HasMany
+    {
+        return $this->hasMany(UsageEvent::class);
+    }
+}

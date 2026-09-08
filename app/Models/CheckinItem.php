@@ -14,6 +14,7 @@ class CheckinItem extends Model
 
     protected $fillable = [
         'project_id', 'title', 'kind', 'medication_timings',
+        'dose_amount', 'dose_unit', 'medication_instructions', 'medication_precautions',
         'schedule_type', 'weekdays', 'cycle_on_days', 'cycle_rest_days', 'starts_on', 'ends_on',
         'position', 'is_active',
     ];
@@ -22,6 +23,7 @@ class CheckinItem extends Model
     {
         return [
             'medication_timings' => 'array',
+            'dose_amount' => 'decimal:2',
             'weekdays' => 'array',
             'cycle_on_days' => 'integer',
             'cycle_rest_days' => 'integer',

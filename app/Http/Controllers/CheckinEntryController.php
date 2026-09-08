@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\CheckinItem;
+use App\Services\UsageRecorder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CheckinEntryController extends Controller
 {
@@ -28,12 +31,13 @@ class CheckinEntryController extends Controller
             'checked_on' => ['required', 'date_format:Y-m-d'],
             'timing' => ['required', Rule::in($allowedTimings)],
             'checked' => ['required', 'boolean'],
+            'status' => ['nullable', Rule::in(['taken', 'missed', 'skipped', 'later'])],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $checkedDate = \Illuminate\Support\Carbon::createFromFormat('!Y-m-d', $validated['checked_on']);
+        $checkedDate = Carbon::createFromFormat('!Y-m-d', $validated['checked_on']);
         if (! $checkinItem->isScheduledFor($checkedDate)) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'checked_on' => 'この日は実施予定日に設定されていません。',
             ]);
         }
@@ -46,14 +50,39 @@ class CheckinEntryController extends Controller
         if (! $request->boolean('checked')) {
             $checkinItem->entries()->where($entryKey)->delete();
 
-            return back()->with('status', '花丸を取り消しました。');
+            return back()->with('status', '記録を取り消しました。');
         }
 
-        $checkinItem->entries()->updateOrCreate(
-            $entryKey,
-            ['user_id' => $request->user()->id, 'note' => $validated['note'] ?? null]
-        );
+        $status = $checkinItem->kind === 'medication'
+            ? ($validated['status'] ?? 'taken')
+            : 'taken';
+        $entry = $checkinItem->entries()->firstOrNew($entryKey);
+        $statusChanged = ! $entry->exists || $entry->status !== $status;
+        $entry->fill([
+            'user_id' => $request->user()->id,
+            'status' => $status,
+            'note' => $validated['note'] ?? null,
+        ]);
 
-        return back()->with('status', '花丸を記録しました。');
+        if ($statusChanged) {
+            $entry->confirmed_at = now();
+        }
+
+        if (! $entry->exists || $entry->isDirty()) {
+            $entry->save();
+        }
+
+        if ($checkinItem->kind === 'medication' && $statusChanged) {
+            app(UsageRecorder::class)->record(
+                $request->user(),
+                'medication.checked',
+                $checkinItem,
+                ['timing' => $validated['timing'], 'status' => $status]
+            );
+        }
+
+        return back()->with('status', $checkinItem->kind === 'medication'
+            ? 'お薬の状況を記録しました。'
+            : '花丸を記録しました。');
     }
 }

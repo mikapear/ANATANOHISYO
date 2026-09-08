@@ -10,11 +10,13 @@ class CheckinEntry extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['checkin_item_id', 'user_id', 'checked_on', 'timing', 'note'];
+    protected $fillable = [
+        'checkin_item_id', 'user_id', 'checked_on', 'timing', 'status', 'confirmed_at', 'note',
+    ];
 
     protected function casts(): array
     {
-        return ['checked_on' => 'date'];
+        return ['checked_on' => 'date', 'confirmed_at' => 'datetime'];
     }
 
     public function item(): BelongsTo

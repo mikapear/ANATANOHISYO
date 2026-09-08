@@ -1,6 +1,7 @@
 <x-site-app title="治療予定 | ANATANOHISHO">
     @php
         $typeLabels = [
+            'consultation' => '診察',
             'chemotherapy' => '抗がん剤治療',
             'infusion' => '点滴',
             'injection' => '注射',
@@ -14,30 +15,30 @@
 
     <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
-            <p class="text-xs font-semibold tracking-wide text-stone-500">治療と暮らしを一緒に見渡す</p>
-            <h1 class="mt-1 text-2xl font-bold text-indigo-950">治療予定</h1>
+            <p class="text-xs font-semibold tracking-wide text-stone-500">診察日と毎日の暮らしを一緒に見渡す</p>
+            <h1 class="mt-1 text-2xl font-bold text-indigo-950">診察・治療予定</h1>
         </div>
         <a href="{{ route('calendar.index') }}" class="secondary-action">カレンダーへ戻る</a>
     </div>
 
     <div class="mt-5 flex items-end gap-3">
         <img src="{{ asset('images/brand/anatanohisyo-guide.png') }}" alt="案内役" class="h-20 w-16 rounded-xl object-cover">
-        <div class="guide-bubble"><span></span><p>抗がん剤や点滴などの予定を、普段の予定と一緒に整理できます。分かる範囲だけで大丈夫ですよ。</p></div>
+        <div class="guide-bubble"><span></span><p>診察日と、相談したいことや診察後に聞いたことを、分かる範囲で残せます。</p></div>
     </div>
 
     <section class="mt-8 rounded-3xl border border-pink-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 class="text-lg font-bold text-stone-800">新しい治療予定</h2>
+        <h2 class="text-lg font-bold text-stone-800">新しい診察・治療予定</h2>
         <form method="POST" action="{{ route('treatments.store') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
             @csrf
             <label class="sm:col-span-2 text-sm font-semibold text-stone-700">
-                治療名 <span class="text-pink-600">*</span>
-                <input class="form-input mt-1" name="name" value="{{ old('name') }}" required placeholder="例：抗がん剤治療">
+                予定の名前 <span class="text-pink-600">*</span>
+                <input class="form-input mt-1" name="name" value="{{ old('name') }}" required placeholder="例：乳腺外科の診察">
             </label>
             <label class="text-sm font-semibold text-stone-700">
-                治療の種類 <span class="text-pink-600">*</span>
+                予定の種類 <span class="text-pink-600">*</span>
                 <select class="form-input mt-1" name="treatment_type" required>
                     @foreach($typeLabels as $value => $label)
-                        <option value="{{ $value }}" @selected(old('treatment_type') === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}" @selected(old('treatment_type', 'consultation') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </label>
@@ -62,17 +63,8 @@
                 <input class="form-input mt-1" name="department" value="{{ old('department') }}" placeholder="例：乳腺外科">
             </label>
             <label class="sm:col-span-2 text-sm font-semibold text-stone-700">
-                関連する暮らしの予定
-                <select class="form-input mt-1" name="project_id">
-                    <option value="">指定しない</option>
-                    @foreach($projects as $project)
-                        <option value="{{ $project->id }}" @selected((string) old('project_id', request('project_id')) === (string) $project->id)>{{ $project->name }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="sm:col-span-2 text-sm font-semibold text-stone-700">
-                メモ
-                <textarea class="form-input mt-1" name="note" rows="3" maxlength="2000" placeholder="持ち物や確認したいことなど">{{ old('note') }}</textarea>
+                診察前のメモ・相談したいこと
+                <textarea class="form-input mt-1" name="note" rows="3" maxlength="2000" placeholder="症状や、先生に聞きたいことなど">{{ old('note') }}</textarea>
             </label>
             @if($errors->any())
                 <div class="sm:col-span-2 rounded-2xl bg-pink-50 px-4 py-3 text-sm text-pink-800">
@@ -80,7 +72,7 @@
                 </div>
             @endif
             <div class="sm:col-span-2">
-                <button class="primary-action" type="submit">治療予定を登録する</button>
+                <button class="primary-action" type="submit">診察・治療予定を登録する</button>
             </div>
         </form>
     </section>
@@ -107,10 +99,10 @@
                                     @if($treatment->hospital)・{{ $treatment->hospital }} @endif
                                     @if($treatment->department)・{{ $treatment->department }} @endif
                                 </p>
-                                @if($treatment->note)<p class="mt-2 text-sm text-stone-600">{{ $treatment->note }}</p>@endif
+                                @if($treatment->note)<p class="mt-2 text-sm text-stone-600"><span class="font-semibold">相談メモ：</span>{{ $treatment->note }}</p>@endif
+                                @if($treatment->visit_summary)<p class="mt-2 whitespace-pre-line text-sm text-stone-600"><span class="font-semibold">診察後：</span>{{ $treatment->visit_summary }}</p>@endif
                             </div>
                             <div class="flex flex-wrap gap-2">
-                                <a class="secondary-action" href="{{ route('activity-logs.create', ['treatment_id' => $treatment->id, 'performed_on' => $treatment->scheduled_on->toDateString(), 'project_id' => $treatment->project_id, 'title' => $treatment->name.'後の体調記録']) }}">治療後の体調を記録</a>
                                 <button type="button" class="secondary-action" @click="editing = !editing">編集</button>
                             </div>
                         </div>
@@ -136,12 +128,19 @@
                             <input class="form-input" type="number" name="cycle_number" value="{{ $treatment->cycle_number }}" min="1" max="999" placeholder="クール数">
                             <input class="form-input" name="hospital" value="{{ $treatment->hospital }}" placeholder="病院">
                             <input class="form-input" name="department" value="{{ $treatment->department }}" placeholder="診療科">
-                            <select class="form-input" name="project_id"><option value="">暮らしの予定なし</option>@foreach($projects as $project)<option value="{{ $project->id }}" @selected($treatment->project_id === $project->id)>{{ $project->name }}</option>@endforeach</select>
                             <select class="form-input" name="status">@foreach($statusLabels as $value => $label)<option value="{{ $value }}" @selected($treatment->status === $value)>{{ $label }}</option>@endforeach</select>
                             <textarea class="form-input sm:col-span-2" name="note" rows="2">{{ $treatment->note }}</textarea>
                             <div class="flex flex-wrap gap-2 sm:col-span-2">
                                 <button class="primary-action" type="submit">変更を保存</button>
                             </div>
+                        </form>
+                        <form id="treatment-{{ $treatment->id }}" method="POST" action="{{ route('treatments.summary', $treatment) }}" class="mt-4 border-t border-stone-100 pt-4">
+                            @csrf @method('PATCH')
+                            <label class="text-sm font-semibold text-stone-700">
+                                診察後のメモ
+                                <textarea class="form-input mt-1" name="visit_summary" rows="3" maxlength="4000" placeholder="説明されたこと、検査結果、薬の変更など">{{ $treatment->visit_summary }}</textarea>
+                            </label>
+                            <button class="secondary-action mt-2" type="submit">診察後のメモを保存</button>
                         </form>
                         <form method="POST" action="{{ route('treatments.destroy', $treatment) }}" class="mt-3 text-right" onsubmit="return confirm('この治療予定を削除しますか？')">
                             @csrf

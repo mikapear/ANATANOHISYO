@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/care', [CareController::class, 'index'])->name('care.index');
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::patch('treatments/{treatment}/status', [TreatmentController::class, 'updateStatus'])->name('treatments.status');
+    Route::patch('treatments/{treatment}/summary', [TreatmentController::class, 'updateSummary'])->name('treatments.summary');
     Route::resource('treatments', TreatmentController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('/goals/manage/{category}', [LifeGoalController::class, 'manage'])->name('goals.manage');
     Route::resource('goals', LifeGoalController::class)->only(['index', 'store', 'update', 'destroy']);

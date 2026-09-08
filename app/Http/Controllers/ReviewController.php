@@ -68,6 +68,7 @@ class ReviewController extends Controller
             ->where('user_id', $user->id)
             ->whereIn('checkin_item_id', $medicationItems->pluck('id'))
             ->whereBetween('checked_on', [$start->toDateString(), $end->toDateString()])
+            ->where('status', 'taken')
             ->count();
 
         $goalEntries = LifeGoalEntry::query()

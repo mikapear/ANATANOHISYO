@@ -57,6 +57,7 @@
                     $dayCheckinTotal = $scheduledDayItems->sum(fn ($item) => $item->scheduledSlotCount());
                     $dayCheckins = $checkinEntries->get($key, collect())
                         ->filter(fn ($entry) => $scheduledDayItemIds->contains($entry->checkin_item_id));
+                    $dayCompletedCheckins = $dayCheckins->where('status', 'taken');
                     $isCurrent = $day->month === $current->month;
                     $isSelected = $selected?->isSameDay($day);
                     $isToday = $day->isToday();
@@ -66,7 +67,7 @@
                     <div class="mt-1 space-y-1">
                         @if ($dayTodos->isNotEmpty())<span class="calendar-count calendar-count--todo">予定 {{ $dayTodos->count() }}</span>@endif
                         @if ($dayLogs->isNotEmpty())<span class="calendar-count calendar-count--log">記録 {{ $dayLogs->count() }}</span>@endif
-                        @if ($dayTreatments->isNotEmpty())<span class="calendar-count calendar-count--treatment">治療 {{ $dayTreatments->count() }}</span>@endif
+                        @if ($dayTreatments->isNotEmpty())<span class="calendar-count calendar-count--treatment">診察・治療 {{ $dayTreatments->count() }}</span>@endif
                         @if ($dayGoals->isNotEmpty())<span class="calendar-count calendar-count--goal">目標 {{ $dayGoalEntries->count() }}/{{ $dayGoals->count() }}</span>@endif
                         @php
                             $dayConditions = $dayLogs->pluck('condition')->filter()->unique()->values();
@@ -78,10 +79,10 @@
                                 @endforeach
                             </span>
                         @endif
-                        @if ($dayCheckins->isNotEmpty())
-                            <span class="calendar-flower-wrap" title="花丸 {{ $dayCheckins->count() }}/{{ $dayCheckinTotal }}">
-                                <x-checkin-flower class="{{ $dayCheckinTotal > 0 && $dayCheckins->count() >= $dayCheckinTotal ? 'checkin-flower--complete' : 'checkin-flower--partial' }}" />
-                                <span>{{ $dayCheckins->count() }}</span>
+                        @if ($dayCompletedCheckins->isNotEmpty())
+                            <span class="calendar-flower-wrap" title="服用・実施済み {{ $dayCompletedCheckins->count() }}/{{ $dayCheckinTotal }}">
+                                <x-checkin-flower class="{{ $dayCheckinTotal > 0 && $dayCompletedCheckins->count() >= $dayCheckinTotal ? 'checkin-flower--complete' : 'checkin-flower--partial' }}" />
+                                <span>{{ $dayCompletedCheckins->count() }}</span>
                             </span>
                         @endif
                     </div>
@@ -107,12 +108,12 @@
                 <div class="flex gap-2">
                     <a class="text-action" href="{{ route('todos.create', ['due_date' => $selectedKey, 'project_id' => $projectId]) }}">＋ やること</a>
                     <a class="text-action" href="{{ route('activity-logs.create', ['performed_on' => $selectedKey, 'project_id' => $projectId]) }}">＋ 記録</a>
-                    <a class="text-action" href="{{ route('treatments.index', ['scheduled_on' => $selectedKey, 'project_id' => $projectId]) }}">＋ 治療予定</a>
+                    <a class="text-action" href="{{ route('treatments.index', ['scheduled_on' => $selectedKey, 'project_id' => $projectId]) }}">＋ 診察予定</a>
                 </div>
             </div>
             @if($selectedTreatments->isNotEmpty())
                 <div class="mt-5 rounded-2xl border border-pink-200 bg-pink-50/60 p-4">
-                    <h3 class="text-sm font-semibold text-stone-800">治療予定</h3>
+                    <h3 class="text-sm font-semibold text-stone-800">診察・治療予定</h3>
                     <ul class="mt-2 space-y-2">
                         @foreach($selectedTreatments as $treatment)
                             <li class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-3 py-2">
@@ -123,8 +124,8 @@
                                 </span>
                                 <span class="flex flex-wrap items-center gap-2 text-xs font-medium text-pink-700">
                                     <span>@if($treatment->scheduled_at){{ substr($treatment->scheduled_at, 0, 5) }} @endif
-                                    {{ ['chemotherapy'=>'抗がん剤','infusion'=>'点滴','injection'=>'注射','radiation'=>'放射線','procedure'=>'処置・手術','other'=>'その他'][$treatment->treatment_type] }}</span>
-                                    <a class="rounded-full border border-pink-200 bg-white px-2 py-1 text-stone-600 hover:border-pink-400" href="{{ route('activity-logs.create', ['treatment_id' => $treatment->id, 'performed_on' => $selectedKey, 'project_id' => $treatment->project_id, 'title' => $treatment->name.'後の体調記録']) }}">体調を記録</a>
+                                    {{ ['consultation'=>'診察','chemotherapy'=>'抗がん剤','infusion'=>'点滴','injection'=>'注射','radiation'=>'放射線','procedure'=>'処置・手術','other'=>'その他'][$treatment->treatment_type] }}</span>
+                                    <a class="rounded-full border border-pink-200 bg-white px-2 py-1 text-stone-600 hover:border-pink-400" href="{{ route('treatments.index') }}#treatment-{{ $treatment->id }}">診察メモ</a>
                                 </span>
                             </li>
                         @endforeach
@@ -218,12 +219,43 @@
                                                 <span>{{ $item->title }}</span>
                                                 @if($item->kind === 'medication')<span class="medication-badge">お薬</span>@endif
                                             </div>
+                                            @if($item->kind === 'medication' && ($item->dose_amount || $item->medication_instructions))
+                                                <p class="mb-2 text-xs text-stone-500">
+                                                    @if($item->dose_amount)1回 {{ rtrim(rtrim($item->dose_amount, '0'), '.') }}{{ $item->dose_unit }}@endif
+                                                    @if($item->medication_instructions)・{{ $item->medication_instructions }}@endif
+                                                </p>
+                                            @endif
                                             <div class="grid gap-2">
                                                 @foreach($timings as $timing)
                                                     @php
                                                         $entry = $selectedCheckins->first(fn ($candidate) => $candidate->checkin_item_id === $item->id && $candidate->timing === $timing);
                                                         $checked = (bool) $entry;
                                                     @endphp
+                                                    @if($item->kind === 'medication')
+                                                        @php($medicationStatusLabels = ['taken' => '服用済み', 'missed' => '飲み忘れ', 'skipped' => '服用しなかった', 'later' => 'あとで確認'])
+                                                        <form method="POST" action="{{ route('checkin-entries.update', $item) }}" class="calendar-checkin-row">
+                                                            @csrf @method('PUT')
+                                                            <input type="hidden" name="checked_on" value="{{ $selectedKey }}">
+                                                            <input type="hidden" name="timing" value="{{ $timing }}">
+                                                            <input type="hidden" name="checked" value="1">
+                                                            <span class="min-w-16 text-sm font-medium text-indigo-950">{{ $timingLabels[$timing] }}</span>
+                                                            <select name="status" class="form-input min-w-0 flex-1 text-sm">
+                                                                @foreach($medicationStatusLabels as $statusValue => $statusLabel)
+                                                                    <option value="{{ $statusValue }}" @selected(($entry?->status ?? 'taken') === $statusValue)>{{ $statusLabel }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                            <button class="secondary-action shrink-0" type="submit">保存</button>
+                                                        </form>
+                                                        @if($entry)
+                                                            <form method="POST" action="{{ route('checkin-entries.update', $item) }}" class="text-right">
+                                                                @csrf @method('PUT')
+                                                                <input type="hidden" name="checked_on" value="{{ $selectedKey }}">
+                                                                <input type="hidden" name="timing" value="{{ $timing }}">
+                                                                <input type="hidden" name="checked" value="0">
+                                                                <button class="text-xs font-medium text-stone-500" type="submit">記録を取り消す</button>
+                                                            </form>
+                                                        @endif
+                                                    @else
                                                     <form method="POST" action="{{ route('checkin-entries.update', $item) }}" class="calendar-checkin-row">
                                                         @csrf
                                                         @method('PUT')
@@ -250,6 +282,7 @@
                                                             <input name="note" value="{{ $entry->note }}" maxlength="500" class="form-input" placeholder="ひとことメモ（任意）">
                                                             <button class="secondary-action shrink-0" type="submit">メモ保存</button>
                                                         </form>
+                                                    @endif
                                                     @endif
                                                 @endforeach
                                             </div>

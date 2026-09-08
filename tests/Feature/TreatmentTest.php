@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Treatment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class TreatmentTest extends TestCase
@@ -20,7 +21,6 @@ class TreatmentTest extends TestCase
     public function test_user_can_register_and_view_treatment_schedule(): void
     {
         $user = User::factory()->create();
-        $project = Project::factory()->for($user)->active()->create(['name' => '治療日誌']);
 
         $this->actingAs($user)->post(route('treatments.store'), [
             'name' => 'AC療法',
@@ -30,7 +30,6 @@ class TreatmentTest extends TestCase
             'cycle_number' => 3,
             'hospital' => 'テスト病院',
             'department' => '乳腺外科',
-            'project_id' => $project->id,
             'note' => '採血後に診察',
         ])->assertRedirect();
 
@@ -138,7 +137,7 @@ class TreatmentTest extends TestCase
 
         $this->actingAs($user)->get('/calendar?month=2026-09&date=2026-09-10')
             ->assertOk()
-            ->assertSee('治療 1')
+            ->assertSee('診察・治療 1')
             ->assertSee('本人の抗がん剤')
             ->assertSee('第2クール')
             ->assertDontSee('他人の治療');
@@ -146,5 +145,87 @@ class TreatmentTest extends TestCase
         $this->get('/treatments?scheduled_on=2026-09-10')
             ->assertOk()
             ->assertSee('value="2026-09-10"', false);
+    }
+
+    public function test_user_can_register_a_consultation_and_save_visit_summary(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('treatments.store'), [
+            'name' => '乳腺外科の診察',
+            'treatment_type' => 'consultation',
+            'scheduled_on' => '2026-09-10',
+            'scheduled_at' => '10:30',
+            'hospital' => 'テスト病院',
+            'department' => '乳腺外科',
+            'note' => '痛みについて相談する',
+        ])->assertRedirect();
+
+        $treatment = Treatment::sole();
+        $this->patch(route('treatments.summary', $treatment), [
+            'visit_summary' => '検査結果の説明を受けた。薬は変更なし。',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('treatments', [
+            'id' => $treatment->id,
+            'treatment_type' => 'consultation',
+            'note' => '痛みについて相談する',
+            'visit_summary' => '検査結果の説明を受けた。薬は変更なし。',
+        ]);
+        $this->get(route('treatments.index'))
+            ->assertOk()
+            ->assertSee('相談メモ')
+            ->assertSee('検査結果の説明を受けた。薬は変更なし。');
+    }
+
+    public function test_user_cannot_update_another_users_visit_summary(): void
+    {
+        $treatment = Treatment::create([
+            'user_id' => User::factory()->create()->id,
+            'name' => '他人の診察',
+            'treatment_type' => 'consultation',
+            'scheduled_on' => '2026-09-10',
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->patch(route('treatments.summary', $treatment), ['visit_summary' => '変更'])
+            ->assertForbidden();
+
+        $this->assertNull($treatment->fresh()->visit_summary);
+    }
+
+    public function test_today_shows_only_todays_own_consultation(): void
+    {
+        Carbon::setTestNow('2026-09-10 08:00:00');
+        $user = User::factory()->create();
+        Treatment::create([
+            'user_id' => $user->id,
+            'name' => '今日の診察',
+            'treatment_type' => 'consultation',
+            'scheduled_on' => '2026-09-10',
+            'note' => '先生に聞きたいこと',
+        ]);
+        Treatment::create([
+            'user_id' => $user->id,
+            'name' => '明日の診察',
+            'treatment_type' => 'consultation',
+            'scheduled_on' => '2026-09-11',
+        ]);
+        Treatment::create([
+            'user_id' => User::factory()->create()->id,
+            'name' => '他人の診察',
+            'treatment_type' => 'consultation',
+            'scheduled_on' => '2026-09-10',
+        ]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('今日の診察')
+            ->assertSee('先生に聞きたいこと')
+            ->assertSee('診察後のメモを書く')
+            ->assertDontSee('明日の診察')
+            ->assertDontSee('他人の診察');
+
+        Carbon::setTestNow();
     }
 }

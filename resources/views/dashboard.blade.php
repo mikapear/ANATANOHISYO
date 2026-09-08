@@ -55,6 +55,50 @@
             </div>
         </div>
 
+        @if($todayTreatments->isNotEmpty())
+            @php
+                $todayTreatmentTypes = ['consultation' => '診察', 'chemotherapy' => '抗がん剤治療', 'infusion' => '点滴', 'injection' => '注射', 'radiation' => '放射線治療', 'procedure' => '処置・手術', 'other' => 'その他'];
+                $todayTreatmentStatuses = ['scheduled' => '予定', 'completed' => '受診済み', 'postponed' => '延期', 'changed' => '内容変更'];
+            @endphp
+            <section class="mt-8 rounded-3xl border border-pink-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="section-today-treatment">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold tracking-wide text-stone-500">今日の予定</p>
+                        <h2 id="section-today-treatment" class="mt-1 text-xl font-bold text-stone-800">診察・治療</h2>
+                    </div>
+                    <a href="{{ route('treatments.index') }}" class="text-sm font-semibold text-pink-700">予定を確認 →</a>
+                </div>
+                <div class="mt-4 space-y-3">
+                    @foreach($todayTreatments as $treatment)
+                        <article class="rounded-2xl border border-pink-100 bg-pink-50/50 p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <p class="text-xs font-semibold text-pink-700">
+                                        @if($treatment->scheduled_at){{ substr($treatment->scheduled_at, 0, 5) }}・@endif
+                                        {{ $todayTreatmentTypes[$treatment->treatment_type] ?? '予定' }}
+                                    </p>
+                                    <h3 class="mt-1 font-semibold text-stone-800">{{ $treatment->name }}</h3>
+                                    @if($treatment->hospital || $treatment->department)
+                                        <p class="mt-1 text-xs text-stone-500">{{ collect([$treatment->hospital, $treatment->department])->filter()->join('・') }}</p>
+                                    @endif
+                                    @if($treatment->note)<p class="mt-2 text-sm text-stone-600">相談メモ：{{ $treatment->note }}</p>@endif
+                                </div>
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-600">{{ $todayTreatmentStatuses[$treatment->status] ?? $treatment->status }}</span>
+                            </div>
+                            <details class="mt-3">
+                                <summary class="cursor-pointer text-sm font-semibold text-pink-700">診察後のメモを書く</summary>
+                                <form method="POST" action="{{ route('treatments.summary', $treatment) }}" class="mt-3">
+                                    @csrf @method('PATCH')
+                                    <textarea class="form-input" name="visit_summary" rows="3" maxlength="4000" placeholder="説明されたこと、検査結果、薬の変更など">{{ $treatment->visit_summary }}</textarea>
+                                    <button class="secondary-action mt-2" type="submit">保存</button>
+                                </form>
+                            </details>
+                        </article>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
         @if ($todayGoals->isNotEmpty())
             @php
                 $goalCategoryLabels = ['exercise' => '運動', 'nutrition' => '食事・水分', 'other' => '暮らし'];
@@ -185,7 +229,9 @@
                 $timingLabels = ['once' => 'できた', 'morning' => '朝', 'noon' => '昼', 'evening' => '夜', 'bedtime' => '就寝前'];
                 $projectProgress = $todayProjects->mapWithKeys(function ($project) {
                     $total = $project->checkinItems->sum(fn ($item) => $item->kind === 'medication' ? count($item->medication_timings ?? []) : 1);
-                    $completed = $project->checkinItems->sum(fn ($item) => $item->entries->count());
+                    $completed = $project->checkinItems->sum(fn ($item) => $item->kind === 'medication'
+                        ? $item->entries->where('status', 'taken')->count()
+                        : $item->entries->count());
 
                     return [$project->id => ['total' => $total, 'completed' => $completed]];
                 });
@@ -271,6 +317,13 @@
                                                     <span class="medication-accordion-chevron" :class="{ 'medication-accordion-chevron--open': open }" aria-hidden="true">⌄</span>
                                                 </span>
                                             </button>
+                                            @if($item->dose_amount || $item->medication_instructions || $item->medication_precautions)
+                                                <div class="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-stone-600">
+                                                    @if($item->dose_amount)<p>1回 {{ rtrim(rtrim($item->dose_amount, '0'), '.') }}{{ $item->dose_unit }}</p>@endif
+                                                    @if($item->medication_instructions)<p>{{ $item->medication_instructions }}</p>@endif
+                                                    @if($item->medication_precautions)<p class="text-amber-800">注意：{{ $item->medication_precautions }}</p>@endif
+                                                </div>
+                                            @endif
                                         @else
                                             <div class="checkin-item-block__title">
                                                 <span>{{ $item->title }}</span>
@@ -282,22 +335,49 @@
                                             @if($item->kind === 'medication') x-show="open" x-cloak x-transition.origin.top @endif
                                         >
                                             @foreach($timings as $timing)
-                                                @php($checked = $entriesByTiming->has($timing))
-                                                <form method="POST" action="{{ route('checkin-entries.update', $item) }}">
-                                                    @csrf
-                                                    @method('PUT')
-                                                    <input type="hidden" name="checked_on" value="{{ $today->toDateString() }}">
-                                                    <input type="hidden" name="timing" value="{{ $timing }}">
-                                                    <input type="hidden" name="checked" value="{{ $checked ? 0 : 1 }}">
-                                                    <button class="checkin-toggle {{ $checked ? 'checkin-toggle--done' : '' }}" type="submit">
-                                                        @if ($checked)
-                                                            <x-checkin-flower />
-                                                        @else
-                                                            <span class="checkin-toggle__empty" aria-hidden="true"></span>
+                                                @php($entry = $entriesByTiming->get($timing))
+                                                @if($item->kind === 'medication')
+                                                    @php($statusLabels = ['taken' => '服用済み', 'missed' => '飲み忘れ', 'skipped' => '服用しなかった', 'later' => 'あとで確認'])
+                                                    <div class="rounded-2xl border border-stone-200 bg-white p-3">
+                                                        <div class="flex items-center justify-between gap-2">
+                                                            <span class="text-sm font-semibold text-stone-700">{{ $timingLabels[$timing] }}</span>
+                                                            @if($entry)<span class="text-xs font-medium text-stone-500">{{ $statusLabels[$entry->status] ?? $entry->status }}</span>@endif
+                                                        </div>
+                                                        <div class="mt-2 grid grid-cols-2 gap-2">
+                                                            @foreach($statusLabels as $statusValue => $statusLabel)
+                                                                <form method="POST" action="{{ route('checkin-entries.update', $item) }}">
+                                                                    @csrf @method('PUT')
+                                                                    <input type="hidden" name="checked_on" value="{{ $today->toDateString() }}">
+                                                                    <input type="hidden" name="timing" value="{{ $timing }}">
+                                                                    <input type="hidden" name="checked" value="1">
+                                                                    <input type="hidden" name="status" value="{{ $statusValue }}">
+                                                                    <button type="submit" class="w-full rounded-xl border px-2 py-2 text-xs font-semibold {{ $entry?->status === $statusValue ? 'border-amber-300 bg-amber-100 text-stone-800' : 'border-stone-200 text-stone-600' }}">{{ $statusLabel }}</button>
+                                                                </form>
+                                                            @endforeach
+                                                        </div>
+                                                        @if($entry)
+                                                            <form method="POST" action="{{ route('checkin-entries.update', $item) }}" class="mt-2 text-right">
+                                                                @csrf @method('PUT')
+                                                                <input type="hidden" name="checked_on" value="{{ $today->toDateString() }}">
+                                                                <input type="hidden" name="timing" value="{{ $timing }}">
+                                                                <input type="hidden" name="checked" value="0">
+                                                                <button type="submit" class="text-xs font-medium text-stone-500">記録を取り消す</button>
+                                                            </form>
                                                         @endif
-                                                        <span>{{ $timingLabels[$timing] }}</span>
-                                                    </button>
-                                                </form>
+                                                    </div>
+                                                @else
+                                                    @php($checked = (bool) $entry)
+                                                    <form method="POST" action="{{ route('checkin-entries.update', $item) }}">
+                                                        @csrf @method('PUT')
+                                                        <input type="hidden" name="checked_on" value="{{ $today->toDateString() }}">
+                                                        <input type="hidden" name="timing" value="{{ $timing }}">
+                                                        <input type="hidden" name="checked" value="{{ $checked ? 0 : 1 }}">
+                                                        <button class="checkin-toggle {{ $checked ? 'checkin-toggle--done' : '' }}" type="submit">
+                                                            @if($checked)<x-checkin-flower />@else<span class="checkin-toggle__empty" aria-hidden="true"></span>@endif
+                                                            <span>{{ $timingLabels[$timing] }}</span>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                             @endforeach
                                         </div>
                                     </div>
@@ -475,8 +555,6 @@
     </footer>
 </body>
 </html>
-
-
 
 
 

@@ -43,6 +43,9 @@
                                     @foreach($item->medication_timings ?? [] as $timing)
                                         <span class="medication-timing">{{ $timingLabels[$timing] ?? $timing }}</span>
                                     @endforeach
+                                    @if($item->dose_amount)
+                                        <span class="medication-timing">{{ rtrim(rtrim($item->dose_amount, '0'), '.') }}{{ $item->dose_unit }}</span>
+                                    @endif
                                 </div>
                             @endif
                             <div class="mt-1 flex flex-wrap gap-1">
@@ -53,7 +56,15 @@
                             </div>
                         </div>
                         <details class="schedule-edit-details order-last w-full">
-                            <summary>曜日・期間・周期を変更</summary>
+                            <summary>お薬・曜日・期間の詳細を変更</summary>
+                            @if($item->kind === 'medication')
+                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                    <div><label class="form-label">1回の量</label><input type="number" name="dose_amount" min="0.01" max="999999.99" step="0.01" value="{{ $item->dose_amount }}" class="form-input" placeholder="例：1"></div>
+                                    <div><label class="form-label">単位</label><input name="dose_unit" maxlength="30" value="{{ $item->dose_unit }}" class="form-input" placeholder="例：錠、包、mL"></div>
+                                    <div><label class="form-label">服用方法</label><textarea name="medication_instructions" maxlength="1000" rows="2" class="form-input" placeholder="例：朝食後に水で服用">{{ $item->medication_instructions }}</textarea></div>
+                                    <div><label class="form-label">注意事項</label><textarea name="medication_precautions" maxlength="1000" rows="2" class="form-input" placeholder="処方時に伝えられた注意事項">{{ $item->medication_precautions }}</textarea></div>
+                                </div>
+                            @endif
                             <div class="mt-3 grid gap-3 sm:grid-cols-3">
                                 <div>
                                     <label class="form-label">予定</label>
@@ -134,6 +145,12 @@
                 @endforeach
             </div>
             <p class="mt-2 text-xs text-stone-500">朝と夜など、複数選べます。</p>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div><label for="new-dose-amount" class="form-label">1回の量</label><input id="new-dose-amount" type="number" name="dose_amount" min="0.01" max="999999.99" step="0.01" value="{{ old('dose_amount') }}" class="form-input" placeholder="例：1"></div>
+                <div><label for="new-dose-unit" class="form-label">単位</label><input id="new-dose-unit" name="dose_unit" maxlength="30" value="{{ old('dose_unit') }}" class="form-input" placeholder="例：錠、包、mL"></div>
+                <div><label for="new-medication-instructions" class="form-label">服用方法</label><textarea id="new-medication-instructions" name="medication_instructions" maxlength="1000" rows="2" class="form-input" placeholder="例：朝食後に水で服用">{{ old('medication_instructions') }}</textarea></div>
+                <div><label for="new-medication-precautions" class="form-label">注意事項</label><textarea id="new-medication-precautions" name="medication_precautions" maxlength="1000" rows="2" class="form-input" placeholder="処方時に伝えられた注意事項">{{ old('medication_precautions') }}</textarea></div>
+            </div>
         </div>
 
         <div class="mt-4 border-t border-stone-100 pt-4">
@@ -174,6 +191,10 @@
 
         @error('title')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
         @error('medication_timings')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+        @error('dose_amount')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+        @error('dose_unit')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+        @error('medication_instructions')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+        @error('medication_precautions')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
         @error('weekdays')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
         @error('cycle_on_days')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
         @error('cycle_rest_days')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
 use App\Models\Treatment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,12 +18,8 @@ class TreatmentController extends Controller
             ->orderBy('scheduled_on')
             ->orderBy('scheduled_at')
             ->get();
-        $projects = Project::where('user_id', $user->id)
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get(['id', 'name']);
 
-        return view('treatments.index', compact('treatments', 'projects'));
+        return view('treatments.index', compact('treatments'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -54,6 +49,17 @@ class TreatmentController extends Controller
         return back()->with('status', '治療の状態を更新しました。');
     }
 
+    public function updateSummary(Request $request, Treatment $treatment): RedirectResponse
+    {
+        $this->authorizeOwner($request, $treatment);
+        $validated = $request->validate([
+            'visit_summary' => ['nullable', 'string', 'max:4000'],
+        ]);
+        $treatment->update($validated);
+
+        return back()->with('status', '診察後のメモを保存しました。');
+    }
+
     public function destroy(Request $request, Treatment $treatment): RedirectResponse
     {
         $this->authorizeOwner($request, $treatment);
@@ -66,17 +72,15 @@ class TreatmentController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'treatment_type' => ['required', Rule::in(['chemotherapy', 'infusion', 'injection', 'radiation', 'procedure', 'other'])],
+            'treatment_type' => ['required', Rule::in(['consultation', 'chemotherapy', 'infusion', 'injection', 'radiation', 'procedure', 'other'])],
             'scheduled_on' => ['required', 'date'],
             'scheduled_at' => ['nullable', 'date_format:H:i'],
             'cycle_number' => ['nullable', 'integer', 'min:1', 'max:999'],
             'hospital' => ['nullable', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string', 'max:2000'],
-            'project_id' => [
-                'nullable',
-                Rule::exists('projects', 'id')->where(fn ($query) => $query->where('user_id', $request->user()->id)),
-            ],
+            'visit_summary' => ['nullable', 'string', 'max:4000'],
+            'project_id' => ['prohibited'],
             'status' => ['sometimes', Rule::in(['scheduled', 'completed', 'postponed', 'cancelled', 'changed'])],
         ]);
     }

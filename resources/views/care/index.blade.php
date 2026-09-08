@@ -42,7 +42,7 @@
         <section class="rounded-3xl border border-pink-200 bg-white p-5 shadow-sm sm:p-6">
             <div class="flex items-center gap-3">
                 <span class="flex h-11 w-11 items-center justify-center rounded-full bg-pink-100 text-xl" aria-hidden="true">＋</span>
-                <div><p class="text-xs font-semibold text-stone-500">通院・抗がん剤など</p><h2 class="text-lg font-bold text-stone-800">治療</h2></div>
+                <div><p class="text-xs font-semibold text-stone-500">診察・通院など</p><h2 class="text-lg font-bold text-stone-800">診察・治療</h2></div>
             </div>
             @if($upcomingTreatments->isEmpty())
                 <p class="mt-4 text-sm leading-relaxed text-stone-600">これからの治療予定はありません。</p>
@@ -56,7 +56,7 @@
                     @endforeach
                 </div>
             @endif
-            <div class="mt-5"><a href="{{ route('treatments.index') }}" class="primary-action">治療予定を確認・登録</a></div>
+            <div class="mt-5"><a href="{{ route('treatments.index') }}" class="primary-action">診察予定を確認・登録</a></div>
         </section>
     </div>
 
