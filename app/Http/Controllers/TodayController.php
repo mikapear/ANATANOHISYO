@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ActivityLog;
 use App\Models\LifeGoal;
 use App\Models\Project;
+use App\Models\SurveyAssignment;
 use App\Models\Todo;
 use App\Models\Treatment;
 use App\Services\SecretaryPrompt;
@@ -60,6 +61,15 @@ class TodayController extends Controller
             ->orderBy('scheduled_at')
             ->orderBy('name')
             ->get();
+
+        $pendingSurveyAssignment = SurveyAssignment::query()
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->whereDate('available_from', '<=', $today)
+            ->where(fn ($query) => $query->whereNull('available_until')->orWhereDate('available_until', '>=', $today))
+            ->with('definition:id,title')
+            ->orderBy('due_on')
+            ->first();
 
         $activeProjects = Project::query()
             ->where('user_id', $user->id)
@@ -129,6 +139,7 @@ class TodayController extends Controller
             'completedTodayTodos',
             'todayActivityLogs',
             'todayTreatments',
+            'pendingSurveyAssignment',
             'activeProjects',
             'todayProjects',
             'todayGoals',

@@ -55,6 +55,16 @@
             </div>
         </div>
 
+        @if($pendingSurveyAssignment)
+            <section class="mt-6 rounded-3xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
+                <p class="text-xs font-semibold tracking-wide text-violet-700">ご協力のお願い</p>
+                <div class="mt-1 flex flex-wrap items-center justify-between gap-3">
+                    <div><h2 class="text-lg font-bold text-indigo-950">{{ $pendingSurveyAssignment->definition->title }}</h2><p class="mt-1 text-sm text-stone-600">期限：{{ $pendingSurveyAssignment->due_on->format('n月j日') }}　途中保存できます。</p></div>
+                    <a href="{{ route('surveys.edit', $pendingSurveyAssignment) }}" class="primary-action">回答する</a>
+                </div>
+            </section>
+        @endif
+
         @if($todayTreatments->isNotEmpty())
             @php
                 $todayTreatmentTypes = ['consultation' => '診察', 'chemotherapy' => '抗がん剤治療', 'infusion' => '点滴', 'injection' => '注射', 'radiation' => '放射線治療', 'procedure' => '処置・手術', 'other' => 'その他'];
@@ -555,7 +565,6 @@
     </footer>
 </body>
 </html>
-
 
 
 
