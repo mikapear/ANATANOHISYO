@@ -74,4 +74,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(UsageEvent::class);
     }
+
+    public function surveyAssignments(): HasMany
+    {
+        return $this->hasMany(SurveyAssignment::class);
+    }
 }

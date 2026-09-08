@@ -7,6 +7,8 @@ use App\Models\CheckinEntry;
 use App\Models\CheckinItem;
 use App\Models\LifeGoal;
 use App\Models\Project;
+use App\Models\Treatment;
+use App\Models\UsageEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -72,6 +74,49 @@ class SecretaryPromptTest extends TestCase
             ->assertSee('今日のお薬の確認ができましたね')
             ->assertSee('5分ストレッチ')
             ->assertSee('無理な日は休んで大丈夫');
+    }
+
+    public function test_secretary_mentions_todays_consultation(): void
+    {
+        Carbon::setTestNow('2026-09-02 10:00:00');
+        $user = User::factory()->create();
+        Treatment::create([
+            'user_id' => $user->id,
+            'name' => '乳腺外科の診察',
+            'treatment_type' => 'consultation',
+            'scheduled_on' => '2026-09-02',
+        ]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('今日は「乳腺外科の診察」の予定があります')
+            ->assertSee('診察前のメモ');
+
+        $event = UsageEvent::where('event_name', 'secretary.prompt_shown')->sole();
+        $this->assertSame(['prompt_key' => 'appointment.today'], $event->context);
+        $this->assertStringNotContainsString('乳腺外科', json_encode($event->context));
+    }
+
+    public function test_medication_reminder_takes_priority_over_appointment(): void
+    {
+        Carbon::setTestNow('2026-09-02 10:00:00');
+        [$user] = $this->makeMedicationDay();
+        Treatment::create([
+            'user_id' => $user->id,
+            'name' => '今日の診察',
+            'treatment_type' => 'consultation',
+            'scheduled_on' => '2026-09-02',
+        ]);
+
+        $this->actingAs($user)->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('まだ確認していない分があります')
+            ->assertDontSee('今日は「今日の診察」の予定があります');
+
+        $event = UsageEvent::where('user_id', $user->id)
+            ->where('event_name', 'secretary.prompt_shown')
+            ->sole();
+        $this->assertSame(['prompt_key' => 'medication.pending'], $event->context);
     }
 
     private function makeMedicationDay(): array
