@@ -103,7 +103,7 @@ class CheckinTest extends TestCase
 
         $this->actingAs($user)->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('今日の花丸')
+            ->assertSee('お薬・習慣の確認')
             ->assertSee('朝の薬');
 
         $this->get(route('calendar.index', [
@@ -112,11 +112,12 @@ class CheckinTest extends TestCase
             'project_id' => $project->id,
         ]))
             ->assertOk()
-            ->assertSee('checkin-flower--complete', false)
+            ->assertSee('朝の薬')
             ->assertSee('服用済み');
 
         Carbon::setTestNow();
     }
+
     public function test_user_can_register_medication_with_multiple_timings(): void
     {
         $user = User::factory()->create();
@@ -145,6 +146,7 @@ class CheckinTest extends TestCase
 
         $this->assertDatabaseCount('checkin_items', 0);
     }
+
     public function test_medication_can_be_checked_for_each_timing(): void
     {
         $user = User::factory()->create();
@@ -238,6 +240,7 @@ class CheckinTest extends TestCase
             ->assertSee('習慣・服薬を登録する')
             ->assertDontSee(route('checkin-entries.update', $item), false);
     }
+
     public function test_weekday_schedule_only_appears_and_accepts_marks_on_scheduled_day(): void
     {
         $user = User::factory()->create();

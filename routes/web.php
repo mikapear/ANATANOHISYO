@@ -8,12 +8,14 @@ use App\Http\Controllers\Admin\SurveyExportController as AdminSurveyExportContro
 use App\Http\Controllers\Admin\SurveyQuestionController as AdminSurveyQuestionController;
 use App\Http\Controllers\Admin\SurveyResultController as AdminSurveyResultController;
 use App\Http\Controllers\Admin\UsageDashboardController as AdminUsageDashboardController;
+use App\Http\Controllers\AsNeededMedicationUsageController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CareController;
 use App\Http\Controllers\CheckinEntryController;
 use App\Http\Controllers\CheckinItemController;
 use App\Http\Controllers\LifeGoalController;
 use App\Http\Controllers\LifeGoalEntryController;
+use App\Http\Controllers\MedicationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReviewController;
@@ -37,6 +39,10 @@ Route::get('/dashboard', [TodayController::class, 'index'])
 Route::middleware('auth')->group(function () {
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/care', [CareController::class, 'index'])->name('care.index');
+    Route::get('/medications/create', [MedicationController::class, 'create'])->name('medications.create');
+    Route::post('/medications', [MedicationController::class, 'store'])->name('medications.store');
+    Route::post('/as-needed-medications/{checkinItem}/usages', [AsNeededMedicationUsageController::class, 'store'])->name('as-needed-medications.store');
+    Route::delete('/as-needed-medication-usages/{asNeededMedicationUsage}', [AsNeededMedicationUsageController::class, 'destroy'])->name('as-needed-medications.destroy');
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
     Route::get('/usage', UsageDashboardController::class)->name('usage.index');
     Route::get('/surveys/{surveyAssignment}', [SurveyResponseController::class, 'edit'])->name('surveys.edit');

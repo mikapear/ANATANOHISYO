@@ -23,7 +23,6 @@ class TreatmentTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)->post(route('treatments.store'), [
-            'name' => 'AC療法',
             'treatment_type' => 'chemotherapy',
             'scheduled_on' => '2026-09-10',
             'scheduled_at' => '10:30',
@@ -35,7 +34,7 @@ class TreatmentTest extends TestCase
 
         $this->assertDatabaseHas('treatments', [
             'user_id' => $user->id,
-            'name' => 'AC療法',
+            'name' => '抗がん剤治療',
             'treatment_type' => 'chemotherapy',
             'scheduled_on' => '2026-09-10',
             'cycle_number' => 3,
@@ -44,10 +43,32 @@ class TreatmentTest extends TestCase
 
         $this->get(route('treatments.index'))
             ->assertOk()
-            ->assertSee('AC療法')
+            ->assertSee('抗がん剤治療')
             ->assertSee('第3クール')
             ->assertSee('テスト病院')
             ->assertSee('採血後に診察');
+    }
+
+    public function test_only_other_treatment_type_requires_a_custom_name(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('treatments.store'), [
+            'treatment_type' => 'other',
+            'scheduled_on' => '2026-09-10',
+        ])->assertSessionHasErrors('name');
+
+        $this->actingAs($user)->post(route('treatments.store'), [
+            'name' => '検査結果の説明',
+            'treatment_type' => 'other',
+            'scheduled_on' => '2026-09-10',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('treatments', [
+            'user_id' => $user->id,
+            'name' => '検査結果の説明',
+            'treatment_type' => 'other',
+        ]);
     }
 
     public function test_foreign_project_is_rejected_for_treatment(): void
@@ -137,7 +158,7 @@ class TreatmentTest extends TestCase
 
         $this->actingAs($user)->get('/calendar?month=2026-09&date=2026-09-10')
             ->assertOk()
-            ->assertSee('診察・治療 1')
+            ->assertSee('1件の予定があります')
             ->assertSee('本人の抗がん剤')
             ->assertSee('第2クール')
             ->assertDontSee('他人の治療');

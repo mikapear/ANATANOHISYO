@@ -14,6 +14,7 @@ class CheckinItem extends Model
 
     protected $fillable = [
         'project_id', 'title', 'kind', 'medication_timings',
+        'is_as_needed',
         'dose_amount', 'dose_unit', 'medication_instructions', 'medication_precautions',
         'schedule_type', 'weekdays', 'cycle_on_days', 'cycle_rest_days', 'starts_on', 'ends_on',
         'position', 'is_active',
@@ -23,6 +24,7 @@ class CheckinItem extends Model
     {
         return [
             'medication_timings' => 'array',
+            'is_as_needed' => 'boolean',
             'dose_amount' => 'decimal:2',
             'weekdays' => 'array',
             'cycle_on_days' => 'integer',
@@ -43,9 +45,14 @@ class CheckinItem extends Model
         return $this->hasMany(CheckinEntry::class);
     }
 
+    public function asNeededUsages(): HasMany
+    {
+        return $this->hasMany(AsNeededMedicationUsage::class);
+    }
+
     public function isScheduledFor(CarbonInterface $date): bool
     {
-        if (! $this->is_active) {
+        if (! $this->is_active || $this->is_as_needed) {
             return false;
         }
 
@@ -78,7 +85,7 @@ class CheckinItem extends Model
     public function scheduledSlotCount(): int
     {
         return $this->kind === 'medication'
-            ? count($this->medication_timings ?? [])
+            ? ($this->is_as_needed ? 0 : count($this->medication_timings ?? []))
             : 1;
     }
 }

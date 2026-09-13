@@ -7,23 +7,22 @@
     <title>今日を確認する | ANATANOHISHO</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen app-shell pb-20 text-gray-900 antialiased sm:pb-0">
-    <header class="app-header border-b">
+<body class="min-h-screen app-shell pb-24 text-gray-900 antialiased sm:pb-0">
+    <header class="app-header sticky top-0 z-40 border-b">
         <div class="mx-auto flex min-h-16 max-w-5xl items-center justify-between px-4 py-2 sm:px-6">
-            <a href="{{ route('calendar.index') }}" class="flex items-center gap-2 font-semibold text-indigo-900">
+            <a href="{{ route('dashboard') }}" class="flex items-center gap-2 font-semibold text-indigo-900">
                 <img src="{{ asset('images/brand/anatanohisyo-guide.png') }}" alt="" class="h-10 w-10 rounded-full object-cover">
                 <span class="brand-name hidden sm:inline">ANATANOHISHO</span>
             </a>
-            <form method="POST" action="{{ route('logout') }}" class="sm:hidden">
-                @csrf
-                <button class="rounded-lg px-3 py-2 text-sm font-medium text-indigo-800">ログアウト</button>
-            </form>
+            <a href="{{ route('profile.edit') }}" class="profile-shortcut sm:hidden" aria-label="プロフィールを開く">
+                {{ mb_substr(Auth::user()->name, 0, 1) }}
+            </a>
             <nav class="hidden items-center gap-1 text-sm font-medium sm:flex" aria-label="メインナビゲーション">
                 <a class="site-nav-link site-nav-link--active" href="{{ route('dashboard') }}">今日</a>
                 <a class="site-nav-link" href="{{ route('todos.index') }}">やること</a>
                 <a class="site-nav-link" href="{{ route('activity-logs.index') }}">記録</a>
                 <a class="site-nav-link" href="{{ route('calendar.index') }}">カレンダー</a>
-                <a class="site-nav-link" href="{{ route('projects.index') }}">プロジェクト</a>
+                <a class="site-nav-link" href="{{ route('goals.index') }}">目標</a>
                 <a class="site-nav-link" href="{{ route('profile.edit') }}">プロフィール</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -39,12 +38,18 @@
         $formatTime = fn (?string $time) => $time ? substr($time, 0, 5) : null;
     @endphp
 
-    <main class="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
-        <section class="text-center sm:text-left">
-            
+    <main class="mx-auto max-w-4xl px-4 py-7 sm:px-6 sm:py-10">
+        <section class="flex flex-wrap items-end justify-between gap-4 text-center sm:text-left">
+            <div>
+                <p class="text-xs font-bold tracking-[0.18em] text-violet-600">TODAY</p>
             <h1 class="text-2xl font-bold text-indigo-950 sm:text-3xl">
                 {{ $today->format('Y年n月j日') }}（{{ $weekdays[$today->dayOfWeek] }}）
             </h1>
+            </div>
+            <div class="today-quick-actions" aria-label="今日のクイック操作">
+                <a href="{{ route('calendar.index') }}">カレンダー</a>
+                <a href="{{ route('activity-logs.create', ['performed_on' => $today->toDateString()]) }}" class="today-quick-actions__primary">＋ 記録する</a>
+            </div>
         </section>
 
         <div class="mt-6 flex items-end gap-3">
@@ -257,14 +262,18 @@
                     <div class="today-section__heading">
                         <span class="today-section__mark today-section__mark--completed" aria-hidden="true">花</span>
                         <div>
-                            <p class="today-section__eyebrow">プロジェクトごとに確認</p>
-                            <h2 id="section-checkins" class="today-section__title">プロジェクトごとの今日</h2>
+                            <p class="today-section__eyebrow">お薬や毎日の習慣</p>
+                            <h2 id="section-checkins" class="today-section__title">今日のチェック</h2>
                         </div>
                     </div>
-                    <span class="checkin-overall-progress">{{ $allCheckinCompleted }} / {{ $allCheckinTotal }}</span>
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="checkin-overall-progress">{{ $allCheckinCompleted }}件できた／全{{ $allCheckinTotal }}件</span>
+                        <a href="{{ route('care.index') }}" class="text-xs font-semibold text-violet-700">お薬の登録・変更 →</a>
+                    </div>
                 </div>
 
-                <div class="checkin-project-tabs mt-5" role="tablist" aria-label="プロジェクトを選ぶ">
+                <p class="mt-5 text-xs font-semibold text-stone-500">確認する項目を選ぶ</p>
+                <div class="checkin-project-tabs mt-2" role="tablist" aria-label="確認する項目を選ぶ">
                     @foreach($todayProjects as $checkinProject)
                         @php
                             $progress = $projectProgress[$checkinProject->id];
@@ -302,7 +311,7 @@
                             class="checkin-project-panel"
                         >
                             @if($checkinProject->checkinItems->isNotEmpty())
-                                <div class="project-today-group__heading mb-2"><h3>今日の花丸</h3></div>
+                                <div class="project-today-group__heading mb-2"><h3>お薬・習慣の確認</h3></div>
                             @endif
                             <div class="space-y-2">
                                 @foreach ($checkinProject->checkinItems as $item)
@@ -310,7 +319,7 @@
                                         $timings = $item->kind === 'medication' ? ($item->medication_timings ?? []) : ['once'];
                                         $entriesByTiming = $item->entries->keyBy('timing');
                                     @endphp
-                                    <div class="checkin-item-block" @if($item->kind === 'medication') x-data="{ open: false }" @endif>
+                                    <div class="checkin-item-block {{ $item->kind === 'medication' ? 'medication-today-card' : '' }}" @if($item->kind === 'medication') x-data="{ open: {{ $entriesByTiming->count() < count($timings) ? 'true' : 'false' }} }" @endif>
                                         @if($item->kind === 'medication')
                                             <button
                                                 type="button"
@@ -319,18 +328,18 @@
                                                 :aria-expanded="open"
                                             >
                                                 <span class="flex min-w-0 items-center gap-2">
-                                                    <span class="truncate">{{ $item->title }}</span>
+                                                    <span class="medication-today-card__name truncate">{{ $item->title }}</span>
                                                     <span class="medication-badge">お薬</span>
                                                 </span>
                                                 <span class="flex shrink-0 items-center gap-2">
-                                                    <span class="text-xs text-stone-500">{{ $entriesByTiming->count() }}/{{ count($timings) }}</span>
+                                                    <span class="text-xs font-semibold text-stone-500">{{ $entriesByTiming->count() }}/{{ count($timings) }} 記録</span>
                                                     <span class="medication-accordion-chevron" :class="{ 'medication-accordion-chevron--open': open }" aria-hidden="true">⌄</span>
                                                 </span>
                                             </button>
                                             @if($item->dose_amount || $item->medication_instructions || $item->medication_precautions)
-                                                <div class="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-stone-600">
-                                                    @if($item->dose_amount)<p>1回 {{ rtrim(rtrim($item->dose_amount, '0'), '.') }}{{ $item->dose_unit }}</p>@endif
-                                                    @if($item->medication_instructions)<p>{{ $item->medication_instructions }}</p>@endif
+                                                <div class="medication-today-card__details">
+                                                    @if($item->dose_amount)<p><strong>1回の量</strong> {{ rtrim(rtrim($item->dose_amount, '0'), '.') }}{{ $item->dose_unit }}</p>@endif
+                                                    @if($item->medication_instructions)<p><strong>服用方法</strong> {{ $item->medication_instructions }}</p>@endif
                                                     @if($item->medication_precautions)<p class="text-amber-800">注意：{{ $item->medication_precautions }}</p>@endif
                                                 </div>
                                             @endif
@@ -348,10 +357,10 @@
                                                 @php($entry = $entriesByTiming->get($timing))
                                                 @if($item->kind === 'medication')
                                                     @php($statusLabels = ['taken' => '服用済み', 'missed' => '飲み忘れ', 'skipped' => '服用しなかった', 'later' => 'あとで確認'])
-                                                    <div class="rounded-2xl border border-stone-200 bg-white p-3">
+                                                    <div class="medication-time-slot {{ $entry ? 'medication-time-slot--'.$entry->status : '' }}">
                                                         <div class="flex items-center justify-between gap-2">
-                                                            <span class="text-sm font-semibold text-stone-700">{{ $timingLabels[$timing] }}</span>
-                                                            @if($entry)<span class="text-xs font-medium text-stone-500">{{ $statusLabels[$entry->status] ?? $entry->status }}</span>@endif
+                                                            <span class="medication-time-slot__label">{{ $timingLabels[$timing] }}</span>
+                                                            @if($entry)<span class="medication-current-status medication-current-status--{{ $entry->status }}">{{ $statusLabels[$entry->status] ?? $entry->status }}</span>@else<span class="text-xs font-medium text-stone-400">未記録</span>@endif
                                                         </div>
                                                         <div class="mt-2 grid grid-cols-2 gap-2">
                                                             @foreach($statusLabels as $statusValue => $statusLabel)
@@ -361,7 +370,7 @@
                                                                     <input type="hidden" name="timing" value="{{ $timing }}">
                                                                     <input type="hidden" name="checked" value="1">
                                                                     <input type="hidden" name="status" value="{{ $statusValue }}">
-                                                                    <button type="submit" class="w-full rounded-xl border px-2 py-2 text-xs font-semibold {{ $entry?->status === $statusValue ? 'border-amber-300 bg-amber-100 text-stone-800' : 'border-stone-200 text-stone-600' }}">{{ $statusLabel }}</button>
+                                                                    <button type="submit" aria-pressed="{{ $entry?->status === $statusValue ? 'true' : 'false' }}" class="medication-status-button medication-status-button--{{ $statusValue }} {{ $entry?->status === $statusValue ? 'medication-status-button--selected' : '' }}">{{ $statusLabel }}</button>
                                                                 </form>
                                                             @endforeach
                                                         </div>
@@ -449,7 +458,7 @@
                             @if($progress['total'] > 0 && $progress['completed'] >= $progress['total'])
                                 <div class="checkin-complete-message">
                                     <x-checkin-flower />
-                                    <p>今日の分、すべてできましたね。無理なく続けていきましょう。</p>
+                                    <p><strong>今日のチェックをすべて記録しました。</strong><br>無理なく続けていきましょう。</p>
                                 </div>
                             @endif
                         </div>
@@ -460,10 +469,10 @@
             </section>
         @endif
 
-        <div class="mt-10 flex items-center gap-3"><span class="h-px flex-1 bg-stone-200"></span><p class="text-xs font-semibold text-stone-500">すべてまとめて確認</p><span class="h-px flex-1 bg-stone-200"></span></div>
+        <div class="mt-10 flex items-center gap-3"><span class="h-px flex-1 bg-stone-200"></span><p class="text-xs font-semibold text-stone-500">予定と記録</p><span class="h-px flex-1 bg-stone-200"></span></div>
 
         <div class="mt-5 space-y-5">
-            <section class="today-section today-section--overdue" aria-labelledby="section-overdue">
+            <section class="today-section today-section--overdue {{ $overdueTodos->isEmpty() ? 'today-section--empty' : '' }}" aria-labelledby="section-overdue">
                 <div class="today-section__heading">
                     <span class="today-section__mark today-section__mark--overdue" aria-hidden="true">!</span>
                     <div>
@@ -496,7 +505,7 @@
                 @endif
             </section>
 
-            <section class="today-section today-section--today" aria-labelledby="section-today">
+            <section class="today-section today-section--today {{ $todayDueTodos->isEmpty() ? 'today-section--empty' : '' }}" aria-labelledby="section-today">
                 <div class="today-section__heading">
                     <span class="today-section__mark today-section__mark--today" aria-hidden="true">○</span>
                     <div>
@@ -529,7 +538,7 @@
                 <a href="{{ route('todos.create') }}" class="today-section__action">＋ 今日のやることを追加</a>
             </section>
 
-            <section class="today-section today-section--completed" aria-labelledby="section-completed">
+            <section class="today-section today-section--completed {{ $completedTodayTodos->isEmpty() ? 'today-section--empty' : '' }}" aria-labelledby="section-completed">
                 <div class="today-section__heading">
                     <span class="today-section__mark today-section__mark--completed" aria-hidden="true">✓</span>
                     <div>
@@ -565,10 +574,6 @@
     </footer>
 </body>
 </html>
-
-
-
-
 
 
 

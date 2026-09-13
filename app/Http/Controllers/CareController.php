@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CheckinItem;
 use App\Models\Project;
 use App\Models\Treatment;
 use Illuminate\Http\Request;
@@ -12,6 +13,10 @@ class CareController extends Controller
     public function index(Request $request): View
     {
         $userId = $request->user()->id;
+        $asNeededMedications = CheckinItem::where('kind', 'medication')->where('is_as_needed', true)->where('is_active', true)
+            ->whereHas('project', fn ($query) => $query->where('user_id', $userId))
+            ->with(['asNeededUsages' => fn ($query) => $query->whereDate('used_at', today())->latest('used_at')])
+            ->orderBy('title')->get();
 
         $medicationProjects = Project::where('user_id', $userId)
             ->where('uses_checkins', true)
@@ -34,6 +39,6 @@ class CareController extends Controller
             ->limit(3)
             ->get();
 
-        return view('care.index', compact('medicationProjects', 'checkinProject', 'upcomingTreatments'));
+        return view('care.index', compact('medicationProjects', 'asNeededMedications', 'checkinProject', 'upcomingTreatments'));
     }
 }

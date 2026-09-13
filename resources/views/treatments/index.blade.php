@@ -15,7 +15,7 @@
 
     <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
-            <p class="text-xs font-semibold tracking-wide text-stone-500">診察日と毎日の暮らしを一緒に見渡す</p>
+            <p class="text-xs font-semibold tracking-wide text-stone-500">診察日と相談したいことを分かりやすく</p>
             <h1 class="mt-1 text-2xl font-bold text-indigo-950">診察・治療予定</h1>
         </div>
         <a href="{{ route('calendar.index') }}" class="secondary-action">カレンダーへ戻る</a>
@@ -28,23 +28,19 @@
 
     <section class="mt-8 rounded-3xl border border-pink-200 bg-white p-5 shadow-sm sm:p-6">
         <h2 class="text-lg font-bold text-stone-800">新しい診察・治療予定</h2>
-        <form method="POST" action="{{ route('treatments.store') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
+        <form method="POST" action="{{ route('treatments.store') }}" class="mt-5 grid gap-4 sm:grid-cols-2" x-data="{ type: '{{ old('treatment_type', 'consultation') }}' }">
             @csrf
             <label class="sm:col-span-2 text-sm font-semibold text-stone-700">
-                予定の名前 <span class="text-pink-600">*</span>
-                <input class="form-input mt-1" name="name" value="{{ old('name') }}" required placeholder="例：乳腺外科の診察">
-            </label>
-            <label class="text-sm font-semibold text-stone-700">
                 予定の種類 <span class="text-pink-600">*</span>
-                <select class="form-input mt-1" name="treatment_type" required>
+                <select class="form-input mt-1" name="treatment_type" x-model="type" required>
                     @foreach($typeLabels as $value => $label)
                         <option value="{{ $value }}" @selected(old('treatment_type', 'consultation') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </label>
-            <label class="text-sm font-semibold text-stone-700">
-                何クール目
-                <input class="form-input mt-1" type="number" name="cycle_number" value="{{ old('cycle_number') }}" min="1" max="999" placeholder="例：3">
+            <label class="sm:col-span-2 text-sm font-semibold text-stone-700" x-show="type === 'other'" x-cloak>
+                予定の名前 <span class="text-pink-600">*</span>
+                <input class="form-input mt-1" name="name" value="{{ old('name') }}" maxlength="255" :required="type === 'other'" placeholder="例：検査結果の説明">
             </label>
             <label class="text-sm font-semibold text-stone-700">
                 予定日 <span class="text-pink-600">*</span>
@@ -66,6 +62,21 @@
                 診察前のメモ・相談したいこと
                 <textarea class="form-input mt-1" name="note" rows="3" maxlength="2000" placeholder="症状や、先生に聞きたいことなど">{{ old('note') }}</textarea>
             </label>
+            <details class="activity-advanced sm:col-span-2" @if(old('cycle_number') || old('status')) open @endif>
+                <summary><span>詳しく設定する</span><small>治療クール・状態</small></summary>
+                <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                    <label class="text-sm font-semibold text-stone-700">
+                        何クール目
+                        <input class="form-input mt-1" type="number" name="cycle_number" value="{{ old('cycle_number') }}" min="1" max="999" placeholder="例：3">
+                    </label>
+                    <label class="text-sm font-semibold text-stone-700">
+                        状態
+                        <select class="form-input mt-1" name="status">
+                            @foreach($statusLabels as $value => $label)<option value="{{ $value }}" @selected(old('status', 'scheduled') === $value)>{{ $label }}</option>@endforeach
+                        </select>
+                    </label>
+                </div>
+            </details>
             @if($errors->any())
                 <div class="sm:col-span-2 rounded-2xl bg-pink-50 px-4 py-3 text-sm text-pink-800">
                     @foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach
@@ -118,11 +129,11 @@
                             @endforeach
                         </div>
 
-                        <form x-show="editing" x-cloak method="POST" action="{{ route('treatments.update', $treatment) }}" class="mt-5 grid gap-3 border-t border-stone-100 pt-5 sm:grid-cols-2">
+                        <form x-show="editing" x-cloak method="POST" action="{{ route('treatments.update', $treatment) }}" class="mt-5 grid gap-3 border-t border-stone-100 pt-5 sm:grid-cols-2" x-data="{ type: '{{ $treatment->treatment_type }}' }">
                             @csrf
                             @method('PATCH')
-                            <input class="form-input" name="name" value="{{ $treatment->name }}" required>
-                            <select class="form-input" name="treatment_type">@foreach($typeLabels as $value => $label)<option value="{{ $value }}" @selected($treatment->treatment_type === $value)>{{ $label }}</option>@endforeach</select>
+                            <select class="form-input sm:col-span-2" name="treatment_type" x-model="type">@foreach($typeLabels as $value => $label)<option value="{{ $value }}" @selected($treatment->treatment_type === $value)>{{ $label }}</option>@endforeach</select>
+                            <input x-show="type === 'other'" x-cloak class="form-input sm:col-span-2" name="name" value="{{ $treatment->treatment_type === 'other' ? $treatment->name : '' }}" :required="type === 'other'" placeholder="予定の名前">
                             <input class="form-input" type="date" name="scheduled_on" value="{{ $treatment->scheduled_on->toDateString() }}" required>
                             <input class="form-input" type="time" name="scheduled_at" value="{{ $treatment->scheduled_at ? substr($treatment->scheduled_at, 0, 5) : '' }}">
                             <input class="form-input" type="number" name="cycle_number" value="{{ $treatment->cycle_number }}" min="1" max="999" placeholder="クール数">

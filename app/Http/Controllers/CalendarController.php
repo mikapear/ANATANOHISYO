@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\AsNeededMedicationUsage;
 use App\Models\CheckinEntry;
 use App\Models\LifeGoal;
 use App\Models\LifeGoalEntry;
@@ -68,6 +69,10 @@ class CalendarController extends Controller
             ->get()
             ->groupBy(fn ($entry) => $entry->checked_on->toDateString());
         $checkinTotal = $checkinItems->sum(fn ($item) => $item->kind === 'medication' ? count($item->medication_timings ?? []) : 1);
+        $asNeededUsages = AsNeededMedicationUsage::where('user_id', $userId)
+            ->whereBetween('used_at', [$start->copy()->startOfDay(), $end->copy()->endOfDay()])
+            ->with('item')->orderBy('used_at')->get()
+            ->groupBy(fn ($usage) => $usage->used_at->toDateString());
 
         $lifeGoals = LifeGoal::where('user_id', $userId)
             ->where('is_active', true)
@@ -103,6 +108,7 @@ class CalendarController extends Controller
         return view('calendar.index', compact(
             'current', 'days', 'todos', 'logs', 'treatments', 'selected', 'projects', 'projectId',
             'checkinProjects', 'checkinItems', 'checkinEntries', 'checkinTotal',
+            'asNeededUsages',
             'lifeGoals', 'lifeGoalEntries'
         ));
     }

@@ -60,7 +60,11 @@
                             @if($item->kind === 'medication')
                                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                                     <div><label class="form-label">1回の量</label><input type="number" name="dose_amount" min="0.01" max="999999.99" step="0.01" value="{{ $item->dose_amount }}" class="form-input" placeholder="例：1"></div>
-                                    <div><label class="form-label">単位</label><input name="dose_unit" maxlength="30" value="{{ $item->dose_unit }}" class="form-input" placeholder="例：錠、包、mL"></div>
+                                    <div>
+                                        <label class="form-label">単位</label>
+                                        <input name="dose_unit" list="medication-unit-options-{{ $item->id }}" maxlength="30" value="{{ $item->dose_unit }}" class="form-input" placeholder="候補から選択、または入力">
+                                        <datalist id="medication-unit-options-{{ $item->id }}"><x-medication-unit-options /></datalist>
+                                    </div>
                                     <div><label class="form-label">服用方法</label><textarea name="medication_instructions" maxlength="1000" rows="2" class="form-input" placeholder="例：朝食後に水で服用">{{ $item->medication_instructions }}</textarea></div>
                                     <div><label class="form-label">注意事項</label><textarea name="medication_precautions" maxlength="1000" rows="2" class="form-input" placeholder="処方時に伝えられた注意事項">{{ $item->medication_precautions }}</textarea></div>
                                 </div>
@@ -147,7 +151,11 @@
             <p class="mt-2 text-xs text-stone-500">朝と夜など、複数選べます。</p>
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div><label for="new-dose-amount" class="form-label">1回の量</label><input id="new-dose-amount" type="number" name="dose_amount" min="0.01" max="999999.99" step="0.01" value="{{ old('dose_amount') }}" class="form-input" placeholder="例：1"></div>
-                <div><label for="new-dose-unit" class="form-label">単位</label><input id="new-dose-unit" name="dose_unit" maxlength="30" value="{{ old('dose_unit') }}" class="form-input" placeholder="例：錠、包、mL"></div>
+                <div>
+                    <label for="new-dose-unit" class="form-label">単位</label>
+                    <input id="new-dose-unit" name="dose_unit" list="new-medication-unit-options" maxlength="30" value="{{ old('dose_unit') }}" class="form-input" placeholder="候補から選択、または入力">
+                    <datalist id="new-medication-unit-options"><x-medication-unit-options /></datalist>
+                </div>
                 <div><label for="new-medication-instructions" class="form-label">服用方法</label><textarea id="new-medication-instructions" name="medication_instructions" maxlength="1000" rows="2" class="form-input" placeholder="例：朝食後に水で服用">{{ old('medication_instructions') }}</textarea></div>
                 <div><label for="new-medication-precautions" class="form-label">注意事項</label><textarea id="new-medication-precautions" name="medication_precautions" maxlength="1000" rows="2" class="form-input" placeholder="処方時に伝えられた注意事項">{{ old('medication_precautions') }}</textarea></div>
             </div>

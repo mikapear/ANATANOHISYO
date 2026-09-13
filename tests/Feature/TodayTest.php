@@ -132,7 +132,7 @@ class TodayTest extends TestCase
 
         $this->actingAs($user)->get('/dashboard')
             ->assertOk()
-            ->assertSee('プロジェクトごとの今日')
+            ->assertSee('今日のチェック')
             ->assertSee('治療日誌')
             ->assertSee('今日の治療準備')
             ->assertSee('治療後の体調')
@@ -164,5 +164,3 @@ class TodayTest extends TestCase
         Carbon::setTestNow();
     }
 }
-
-

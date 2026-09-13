@@ -47,7 +47,7 @@
 @layer components{.project-card{@apply block rounded-xl border-2 border-indigo-100 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md}.project-status{@apply inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold}.project-status--active{@apply bg-indigo-100 text-indigo-800}.project-status--completed{@apply bg-emerald-100 text-emerald-800}.project-status--on_hold{@apply bg-amber-100 text-amber-800}}
 @layer components{.activity-card{@apply flex items-center gap-4 rounded-xl border-2 border-indigo-100 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md}}
 @layer components{.calendar-move{@apply flex h-10 w-10 items-center justify-center rounded-full border border-indigo-200 bg-white text-2xl text-indigo-700 shadow-sm hover:bg-indigo-50}.calendar-day{@apply min-h-20 border-b border-r border-stone-100 p-1.5 text-left transition hover:bg-indigo-50 sm:min-h-28 sm:p-2}.calendar-day--outside{@apply bg-stone-50/70 text-stone-400}.calendar-day--selected{@apply bg-indigo-50 ring-2 ring-inset ring-indigo-400}.calendar-day__number{@apply inline-flex h-6 w-6 items-center justify-center text-xs font-semibold}.calendar-day__number--today{@apply rounded-full bg-indigo-700 text-white}.calendar-count{@apply block truncate rounded px-1 py-0.5 text-[10px] font-medium sm:text-xs}.calendar-count--todo{@apply bg-indigo-100 text-indigo-800}.calendar-count--log{@apply bg-amber-100 text-amber-800}.calendar-count--goal{@apply bg-violet-100 text-violet-800}.calendar-count--treatment{@apply bg-pink-100 text-pink-800}}
-@layer components{.mobile-bottom-nav{@apply fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-indigo-100 bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(49,46,129,0.08)] backdrop-blur sm:hidden}.mobile-nav-item{@apply flex min-h-16 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium text-stone-500}.mobile-nav-item>span:first-child{@apply text-lg leading-none}.mobile-nav-item--active{@apply bg-indigo-50 text-indigo-800}}
+@layer components{.mobile-bottom-nav{@apply fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-indigo-100 bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(49,46,129,0.08)] backdrop-blur sm:hidden}.mobile-nav-item{@apply relative flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-[10px] font-medium text-stone-500}.mobile-nav-item--active{@apply bg-indigo-50 text-indigo-800}.mobile-nav-item--active:before{@apply absolute inset-x-3 top-0 h-0.5 rounded-full bg-violet-600 content-['']}.mobile-nav-icon{@apply flex h-6 w-6 items-center justify-center}.mobile-nav-icon svg{@apply h-5 w-5 fill-none stroke-current;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}}
 
 
 /* ANATANOHISHO palette: lavender, peach and warm yellow */
@@ -66,6 +66,7 @@
     }
     .brand-name { color: #1f1f1f; }
     .app-header { border-color: #d8cce0; background: rgba(255, 249, 247, .97); backdrop-filter: blur(12px); }
+    .profile-shortcut { @apply flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold; border-color:#d8cce0; background:#fff; color:#654b7d; box-shadow:0 2px 8px rgba(89,64,122,.08); }
     .app-footer { border-color: #d8cce0; background: #fff9f7; }
     .auth-panel { border: 1px solid #eadff1; background: #ffffff; box-shadow: 0 18px 45px rgba(89, 64, 122, .12); }
 
@@ -277,6 +278,40 @@ a.text-red-600 { border-color: var(--danger-border); }
     background: #fff;
     padding: .65rem .75rem;
 }
+
+.calendar-checkin-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: .75rem;
+}
+
+.calendar-medication-card {
+    padding: .7rem;
+    background: linear-gradient(145deg, #fff 0%, #f8f7ff 100%);
+}
+
+.calendar-medication-card .checkin-item-block__title {
+    margin-bottom: .25rem;
+}
+
+.calendar-medication-select {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: .5rem;
+}
+
+.calendar-medication-select label {
+    color: #433868;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.calendar-medication-select .form-input {
+    min-width: 0;
+    padding: .48rem 1.9rem .48rem .65rem;
+    font-size: .8rem;
+}
 .checkin-manage-row--inactive { opacity: .58; background: #faf9f8; }
 .checkin-icon-button {
     display: inline-flex;
@@ -363,6 +398,28 @@ a.text-red-600 { border-color: var(--danger-border); }
 .medication-accordion-chevron { display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; color:#796f7d; transition:transform .2s ease; }
 .medication-accordion-chevron--open { transform:rotate(180deg); }
 
+.medication-today-card { border-color:#ead9b0; background:#fffdf8; padding:1rem; }
+.medication-today-card__name { color:#3f3543; font-size:1rem; font-weight:700; }
+.medication-today-card__details { margin:.65rem 0 .25rem; border-radius:.75rem; background:#fff5d8; padding:.65rem .75rem; color:#655d62; font-size:.75rem; line-height:1.65; }
+.medication-today-card__details strong { margin-right:.35rem; color:#51494e; }
+.medication-time-slot { border:1px solid #e5ded5; border-radius:.9rem; background:#fff; padding:.8rem; transition:border-color .2s, background-color .2s; }
+.medication-time-slot--taken { border-color:#a7d8bd; background:#f2fbf6; }
+.medication-time-slot--missed { border-color:#edcb86; background:#fff9e9; }
+.medication-time-slot--skipped { border-color:#d3ccd5; background:#f7f5f7; }
+.medication-time-slot--later { border-color:#c9b5da; background:#f7f2fb; }
+.medication-time-slot__label { color:#4f4852; font-size:.9rem; font-weight:800; }
+.medication-current-status { display:inline-flex; border-radius:9999px; padding:.2rem .55rem; font-size:.68rem; font-weight:800; }
+.medication-current-status--taken { background:#d9f2e3; color:#276443; }
+.medication-current-status--missed { background:#ffedbd; color:#79581c; }
+.medication-current-status--skipped { background:#e9e5ea; color:#625b65; }
+.medication-current-status--later { background:#e9ddf2; color:#654b7d; }
+.medication-status-button { width:100%; min-height:2.35rem; border:1px solid #ded8df; border-radius:.7rem; background:#fff; padding:.45rem .35rem; color:#655e68; font-size:.72rem; font-weight:700; transition:border-color .2s, background-color .2s, box-shadow .2s; }
+.medication-status-button--selected { box-shadow:inset 0 0 0 1px currentColor; }
+.medication-status-button--taken.medication-status-button--selected { border-color:#78bd96; background:#dff4e8; color:#276443; }
+.medication-status-button--missed.medication-status-button--selected { border-color:#d9aa4e; background:#ffedbd; color:#79581c; }
+.medication-status-button--skipped.medication-status-button--selected { border-color:#aaa1ad; background:#e9e5ea; color:#554e58; }
+.medication-status-button--later.medication-status-button--selected { border-color:#a58abb; background:#e9ddf2; color:#5b406f; }
+
 .checkin-project-tab__flowers { display:inline-flex; align-items:center; gap:.05rem; }
 .checkin-project-tab__flowers .checkin-project-tab__flower { flex:0 0 auto; }
 
@@ -422,3 +479,77 @@ a.text-red-600 { border-color: var(--danger-border); }
 .goal-category--nutrition { background:#fff0bc; color:#725a19; }
 .goal-category--other { background:#fae8e5; color:#704e57; }
 @media(min-width:640px){.goal-form-panel{padding:1.5rem;}}
+
+/* Today page finishing touches */
+.today-quick-actions { display:flex; align-items:center; gap:.45rem; }
+.today-quick-actions a { display:inline-flex; min-height:2.5rem; align-items:center; justify-content:center; border:1px solid #e2d6eb; border-radius:9999px; background:#fff; padding:.55rem .85rem; color:#654b7d; font-size:.75rem; font-weight:700; transition:border-color .2s, background-color .2s, transform .2s; }
+.today-quick-actions a:hover { border-color:#bda6cf; background:#faf7fc; transform:translateY(-1px); }
+.today-quick-actions .today-quick-actions__primary { border-color:#8b6aa4; background:#73558a; color:#fff; }
+.today-quick-actions .today-quick-actions__primary:hover { border-color:#654b7d; background:#654b7d; }
+
+@media (max-width:639px) {
+    .today-quick-actions { width:100%; justify-content:center; }
+    .today-quick-actions a { flex:1 1 0; }
+    .today-section--empty { padding-top:1rem; padding-bottom:1rem; }
+    .today-section--empty .today-section__empty { margin-top:.65rem; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    .today-quick-actions a { transition:none; }
+}
+
+/* Calendar: keep the month itself at the center of the experience */
+.calendar-filter { border:1px solid #e8e0eb; border-radius:.85rem; background:rgba(255,255,255,.72); padding:.75rem .9rem; }
+.calendar-filter summary { cursor:pointer; color:#6f6873; font-size:.75rem; font-weight:700; }
+.calendar-filter summary::marker { color:#8b6aa4; }
+.calendar-support { display:flex; align-items:flex-end; gap:.75rem; border:1px solid #f0d9d6; border-radius:1rem; background:#fff5f2; padding:1rem; color:#6f6873; font-size:.8rem; line-height:1.65; }
+
+@media (max-width:639px) {
+    .calendar-filter form { align-items:stretch; flex-direction:column; }
+    .calendar-filter form a { align-self:flex-end; }
+}
+
+/* Activity log progressive disclosure */
+.activity-advanced { border:1px solid #e5d9ef; border-radius:.9rem; background:#faf8fc; padding:.9rem 1rem; }
+.activity-advanced summary { display:flex; cursor:pointer; list-style:none; align-items:center; justify-content:space-between; gap:1rem; color:#654b7d; font-size:.875rem; font-weight:700; }
+.activity-advanced summary::-webkit-details-marker { display:none; }
+.activity-advanced summary::after { content:'＋'; display:inline-flex; width:1.75rem; height:1.75rem; flex:0 0 auto; align-items:center; justify-content:center; border-radius:9999px; background:#eee5f6; color:#654b7d; font-size:1rem; }
+.activity-advanced[open] summary::after { content:'−'; }
+.activity-advanced summary span { display:flex; flex-direction:column; }
+.activity-advanced summary small { margin-left:auto; color:#8a818d; font-size:.7rem; font-weight:500; }
+
+@media (max-width:639px) {
+    .activity-advanced summary { align-items:flex-start; }
+    .activity-advanced summary small { display:none; }
+}
+
+/* Calendar at-a-glance signals */
+.calendar-signals { display:flex; min-height:1.45rem; flex-wrap:wrap; align-items:center; gap:.18rem; }
+.calendar-signal { display:inline-flex; min-width:2.2rem; align-items:center; justify-content:center; gap:.15rem; border:1px solid transparent; border-radius:9999px; padding:.18rem .3rem; font-size:.62rem; font-weight:800; line-height:1; }
+.calendar-signal small { font-size:.55rem; font-weight:900; }
+.calendar-signal--done { border-color:#a8d6b9; background:#e2f5e9; color:#276443; }
+.calendar-signal--pending { border-color:#e5c36d; background:#fff1bd; color:#765718; }
+.calendar-signal--attention { border-color:#e1aaa8; background:#fae1df; color:#8a3f45; }
+.calendar-signal--treatment { border-color:#e8acc1; background:#fde1e8; color:#8a4256; }
+.calendar-legend { display:flex; flex-wrap:wrap; gap:.45rem 1rem; color:#6f6873; font-size:.7rem; font-weight:600; }
+.calendar-legend span { display:inline-flex; align-items:center; gap:.35rem; }
+.calendar-legend__mark { display:inline-flex; width:1.25rem; height:1.25rem; align-items:center; justify-content:center; border-radius:9999px; font-style:normal; font-size:.62rem; font-weight:900; }
+.calendar-legend__mark--done { background:#e2f5e9; color:#276443; }
+.calendar-legend__mark--pending { background:#fff1bd; color:#765718; }
+.calendar-legend__mark--treatment { background:#fde1e8; color:#8a4256; }
+.calendar-day-overview { display:grid; gap:.55rem; grid-template-columns:repeat(auto-fit,minmax(12rem,1fr)); }
+.calendar-overview-card { display:flex; align-items:center; gap:.65rem; border:1px solid #e6d9a7; border-radius:.85rem; background:#fff9e4; padding:.7rem .8rem; }
+.calendar-overview-card--done { border-color:#b6ddc5; background:#eff9f3; }
+.calendar-overview-card--treatment { border-color:#efc2d0; background:#fff0f4; }
+.calendar-overview-card__icon { display:inline-flex; width:2rem; height:2rem; flex:0 0 auto; align-items:center; justify-content:center; border-radius:9999px; background:#fff; color:#654b7d; font-size:.75rem; font-weight:900; }
+.calendar-overview-card>span:last-child { display:flex; min-width:0; flex-direction:column; }
+.calendar-overview-card strong { color:#4f4852; font-size:.78rem; }
+.calendar-overview-card small { margin-top:.1rem; color:#746c76; font-size:.68rem; }
+
+@media(max-width:639px) {
+    .calendar-day { min-height:5.65rem; padding:.3rem; }
+    .calendar-signals { align-content:flex-start; gap:.12rem; }
+    .calendar-signal { min-width:1.75rem; padding:.15rem .2rem; font-size:.55rem; }
+    .calendar-signal small { font-size:.48rem; }
+    .calendar-count { font-size:.54rem; padding:.12rem .2rem; }
+}

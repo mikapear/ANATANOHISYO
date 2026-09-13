@@ -63,7 +63,7 @@ class CalendarTest extends TestCase
         $this->actingAs($user)->get(route('calendar.index'))
             ->assertOk()
             ->assertSee('8月25日')
-            ->assertSee('目標 1/1')
+            ->assertSee('目標：記録済み')
             ->assertSee('朝に10分歩く')
             ->assertSee('少しできた')
             ->assertSee('5分')

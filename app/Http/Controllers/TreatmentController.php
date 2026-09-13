@@ -10,11 +10,20 @@ use Illuminate\View\View;
 
 class TreatmentController extends Controller
 {
+    private const TYPE_LABELS = [
+        'consultation' => '診察',
+        'chemotherapy' => '抗がん剤治療',
+        'infusion' => '点滴',
+        'injection' => '注射',
+        'radiation' => '放射線治療',
+        'procedure' => '処置・手術',
+        'other' => 'その他',
+    ];
+
     public function index(Request $request): View
     {
         $user = $request->user();
         $treatments = Treatment::where('user_id', $user->id)
-            ->with('project:id,name')
             ->orderBy('scheduled_on')
             ->orderBy('scheduled_at')
             ->get();
@@ -25,6 +34,7 @@ class TreatmentController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validated($request);
+        $validated['name'] = $this->treatmentName($validated);
         $request->user()->treatments()->create($validated + ['status' => 'scheduled']);
 
         return back()->with('status', '治療予定を登録しました。');
@@ -33,7 +43,9 @@ class TreatmentController extends Controller
     public function update(Request $request, Treatment $treatment): RedirectResponse
     {
         $this->authorizeOwner($request, $treatment);
-        $treatment->update($this->validated($request));
+        $validated = $this->validated($request);
+        $validated['name'] = $this->treatmentName($validated);
+        $treatment->update($validated);
 
         return back()->with('status', '治療予定を更新しました。');
     }
@@ -71,8 +83,8 @@ class TreatmentController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'treatment_type' => ['required', Rule::in(['consultation', 'chemotherapy', 'infusion', 'injection', 'radiation', 'procedure', 'other'])],
+            'name' => ['nullable', 'required_if:treatment_type,other', 'string', 'max:255'],
+            'treatment_type' => ['required', Rule::in(array_keys(self::TYPE_LABELS))],
             'scheduled_on' => ['required', 'date'],
             'scheduled_at' => ['nullable', 'date_format:H:i'],
             'cycle_number' => ['nullable', 'integer', 'min:1', 'max:999'],
@@ -83,6 +95,13 @@ class TreatmentController extends Controller
             'project_id' => ['prohibited'],
             'status' => ['sometimes', Rule::in(['scheduled', 'completed', 'postponed', 'cancelled', 'changed'])],
         ]);
+    }
+
+    private function treatmentName(array $validated): string
+    {
+        return $validated['treatment_type'] === 'other'
+            ? $validated['name']
+            : self::TYPE_LABELS[$validated['treatment_type']];
     }
 
     private function authorizeOwner(Request $request, Treatment $treatment): void
